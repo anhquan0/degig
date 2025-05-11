@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Job {
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  publishedAt   DateTime?
+  expriedAt     DateTime?
+  walletAddress String
+
+  title       String
+  description String? @db.Text
+  reward      Int     @default(0)
+  poc         String
+
+  isPublished Boolean @default(false)
+  isActive    Boolean @default(true)
+  isArchived  Boolean @default(false)
+  isFeatured  Boolean @default(false)
+  isDraft     Boolean @default(false)
+  isPrivate   Boolean @default(false)
+
+  applicationLink String?
+  skills          Json?
+
+  @@index([id])
+  @@index([walletAddress])
+  @@index([isPublished, isPrivate])
+  @@index([expriedAt, updatedAt])
+  @@index([title])
+  @@index([expriedAt(sort: Asc)], map: "Jobs_expriedAt_asc_idx")
+  @@index([expriedAt(sort: Desc)], map: "Jobs_expriedAt_desc_idx")
+  @@index([isFeatured(sort: Desc)])
+  @@index([isPublished, isActive, isArchived])
+  @@index([isPublished, isActive, isArchived, isPrivate])
+  @@index([walletAddress, isArchived, isPublished, isActive])
+  @@map("jobs")
+}
+
+model Contract {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  txHash     String   @map("tx_hash")
+  partyA     String   @map("party_a")
+  partyB     String   @map("party_b")
+  source     String
+  inProgress Boolean  @default(false)
+  inDispute  Boolean  @default(false)
+
+  @@index([id])
+  @@index([partyA, partyB])
+  @@index([createdAt, updatedAt])
+  @@map("contracts")
+}
+
+model Dispute {
+  id         String           @id @default(uuid())
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  txHash     String           @map("tx_hash")
+  partyA     String           @map("party_a")
+  partyB     String           @map("party_b")
+  reason     String
+  submission String?          @db.Text
+  content    String?          @db.Text
+  status     status
+  messages   DisputeMessage[] @relation("DisputeMessages")
+
+  @@index([id])
+  @@index([partyA, partyB])
+  @@index([createdAt, updatedAt])
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    String
+  disputeId String
+  dispute   Dispute  @relation(fields: [disputeId], references: [id], name: "DisputeMessages")
+  content   String?  @db.Text
+
+  @@index([id])
+  @@index([disputeId])
+  @@index([createdAt, updatedAt])
+  @@map("dispute_messages")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  walletAddress    String   @unique
+  email            String   @unique
+  username         String?  @unique
+  photo            String?  @db.Text
+  firstName        String?  @db.VarChar(255)
+  lastName         String?  @db.VarChar(255)
+  isVerified       Boolean  @default(false)
+  role             role     @default(USER)
+  isTalentFilled   Boolean  @default(false)
+  interests        String?  @db.Text
+  bio              String?  @db.Text
+  twitter          String?  @db.Text
+  discord          String?  @db.Text
+  github           String?  @db.Text
+  linkedin         String?  @db.Text
+  website          String?  @db.Text
+  telegram         String?  @db.Text
+  community        String?  @db.Text
+  experience       String?
+  level            String?
+  location         String?
+  cryptoExperience String?
+  workPrefernce    String?
+  notifications    Json?
+  private          Boolean  @default(false)
+  skills           Json?
+  PoW              PoW[]
+  isBlocked        Boolean  @default(false)
+
+  @@index([email])
+  @@index([username])
+  @@index([firstName])
+  @@index([lastName])
+  @@index([location])
+  @@map("users")
+}
+
+model PoW {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String   @db.Text
+  skills      Json?
+  link        String   @db.Text
+  createdAt   DateTime @default(now())
+  subSkills   Json?
+  updatedAt   DateTime @updatedAt
+  like        Json?
+  likeCount   Int      @default(0)
+  user        User     @relation(fields: [userId], references: [id])
+  ogImage     String?  @db.Text
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([likeCount])
+  @@index([likeCount(sort: Desc), createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum dispute_status {
+  OPEN
+  REVIEW
+  RESOLVED
+}
+
+enum status {
+  OPEN
+  REVIEW
+  CLOSED
+  VERIFYING
+  VERIFY_FAIL
+}
+
+enum role {
+  USER
+  SUPPORTER
+}
